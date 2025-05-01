@@ -1,8 +1,144 @@
-# TMDB Data Collector
+## Local Development and Testing Tips
+
+### Local Testing
+For local development and testing without deploying to AWS:
+- Use LocalStack to emulate AWS services
+- Create mock TMDB API responses for testing
+- Implement feature flags to control behavior during testing
+
+### Optimization Tips
+- Profile your Rust code to identify bottlenecks
+- Use asynchronous processing where appropriate
+- Optimize Protocol Buffer schemas for size and performance
+- Consider compression for larger data objects
+
+### Avoiding Common Pitfalls
+- Be careful with TMDB API rate limits - they are strictly enforced
+- Plan for data schema evolution as TMDB may change their API
+- Implement robust error handling for network issues
+- Consider regional availability and latency if deploying globally## Implementation Checklist
+
+Below is a comprehensive list of tasks to complete for this project. Each task includes an explanation and subtasks where appropriate:
+
+### 1. Project Setup
+- [ ] **Create basic project structure**
+  - Create repositories, directories, and initial Cargo.toml
+  - Set up your Rust development environment
+  - Initialize git repository
+- [ ] **Set up Protocol Buffer schemas**
+  - Create schema files for each data type (movies, TV shows, people)
+  - Define message structures matching TMDB API responses
+  - Set up protoc compilation process
+
+### 2. AWS Infrastructure Setup
+- [ ] **Define AWS resources**
+  - Create an infrastructure-as-code template (SAM or Terraform)
+  - Define IAM roles with proper permissions
+  - Configure SQS queues with appropriate settings
+  - Set up S3 buckets with lifecycle policies
+  - Configure EventBridge schedule
+- [ ] **Set up local development environment for AWS**
+  - Configure AWS CLI credentials
+  - Set up local testing for Lambda functions
+
+### 3. Harvester Lambda Implementation
+- [ ] **Implement TMDB API client**
+  - Create authentication and request logic
+  - Handle rate limiting and retries
+  - Set up endpoint interactions
+- [ ] **Develop ID harvesting logic**
+  - Fetch daily export files or changes from TMDB
+  - Extract and filter relevant IDs
+  - Implement pagination for large datasets
+- [ ] **Implement SQS integration**
+  - Send IDs to queue with appropriate batching
+  - Add metadata for processing
+  - Implement error handling and retry logic
+
+### 4. ID's Holder Queue Configuration
+- [ ] **Configure SQS queue settings**
+  - Set visibility timeout appropriate for processing time
+  - Configure dead-letter queue for failed messages
+  - Set up redrive policy
+  - Optimize batch size settings
+- [ ] **Implement monitoring**
+  - Set up CloudWatch alarms for queue depth
+  - Configure metrics for queue performance
+
+### 5. Collector Lambda Implementation
+- [ ] **Implement detailed TMDB API fetching**
+  - Create functions for each media type (movies, TV shows, people)
+  - Include all required parameters and options
+  - Handle nested data relationships
+- [ ] **Develop Protocol Buffer serialization**
+  - Convert JSON responses to protobuf format
+  - Implement efficient binary serialization
+  - Handle optional fields and defaults
+- [ ] **Implement S3 storage logic**
+  - Create efficient object naming conventions
+  - Organize data by type and other attributes
+  - Implement data versioning if needed
+- [ ] **Manage concurrency and rate limits**
+  - Implement backoff strategies
+  - Track and respect TMDB API rate limits
+  - Optimize for performance while staying within limits
+
+### 6. Storage Organization
+- [ ] **Design object hierarchy**
+  - Create naming conventions for S3 objects
+  - Optimize for both storage and retrieval efficiency
+  - Plan for future growth
+- [ ] **Implement data indexing**
+  - Create index files or metadata objects
+  - Enable efficient querying and filtering
+  - Track data versions
+
+### 7. Monitoring and Logging
+- [ ] **Set up CloudWatch logging**
+  - Configure structured logging for Lambda functions
+  - Set appropriate log retention periods
+  - Create log filters for important events
+- [ ] **Implement monitoring**
+  - Create dashboards for system health
+  - Set up alerts for failures or anomalies
+  - Track API usage and quota consumption
+
+### 8. Testing
+- [ ] **Write unit tests**
+  - Test each component in isolation
+  - Mock external services
+  - Cover error handling and edge cases
+- [ ] **Perform integration testing**
+  - Test the entire workflow
+  - Verify data correctness
+  - Measure performance
+- [ ] **Load testing**
+  - Verify system handles expected data volumes
+  - Test with rate limit constraints
+  - Ensure recovery from failures
+
+### 9. Documentation and Maintenance
+- [ ] **Complete documentation**
+  - Update README with final details
+  - Document API usage and configuration options
+  - Create deployment guides
+- [ ] **Create maintenance procedures**
+  - Document backup and recovery procedures
+  - Create update and migration process
+  - Plan for TMDB API changes## Advanced Usage
+
+See the [Advanced Usage Guide](docs/advanced-usage.md) for more complex scenarios including:
+- Collecting specific media types
+- Setting custom date ranges
+- Implementing differential updates
+- Optimizing for large data sets
+- Working with Protocol Buffer schemas# TMDB Data Collector
 
 ![TMDB Data Collector Architecture](https://path-to-your-architecture-diagram.png)
 
-A robust, scalable system for harvesting and storing data from The Movie Database (TMDB) API. This project efficiently collects information about movies, TV shows, seasons, episodes, people, and more through a series of serverless functions and queues.
+A robust, scalable Rust-based system for harvesting and storing data from The Movie Database (TMDB) API.
+
+A robust, scalable Rust-based system for harvesting and storing data from The Movie Database (TMDB) API. This project efficiently collects information about movies, TV shows, seasons, episodes, people, and more through a series of serverless functions and queues, built with performance and reliability in mind.
 
 ## Table of Contents
 - [Overview](#overview)
@@ -11,8 +147,10 @@ A robust, scalable system for harvesting and storing data from The Movie Databas
 - [Setup and Installation](#setup-and-installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
+- [Implementation Checklist](#implementation-checklist)
 - [API Reference](#api-reference)
 - [Performance Considerations](#performance-considerations)
+- [Local Development and Testing Tips](#local-development-and-testing-tips)
 - [Monitoring and Logging](#monitoring-and-logging)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
@@ -82,7 +220,11 @@ Data flows through the system as follows:
 
 - Organizes data by media type (movies, TV shows, seasons, episodes, people)
 - Uses efficient object naming conventions for easy retrieval
-- Implements appropriate data formats (JSON, Parquet, etc.)
+- Implements Protocol Buffers (protobuf) for serialization, providing:
+  - Compact binary format for storage efficiency
+  - Structured schema-based approach
+  - Platform/language neutrality for future interoperability
+  - Significantly reduced storage costs compared to JSON
 - Enables data versioning and change tracking
 - Optimizes for both storage efficiency and query performance
 
@@ -97,8 +239,9 @@ Data flows through the system as follows:
   - S3 Buckets
   - IAM Roles and Policies
 - TMDB API Key ([obtain here](https://www.themoviedb.org/documentation/api))
-- Node.js 18+ for local development
-- AWS CLI and Serverless Framework for deployment
+- Rust toolchain (rustc, cargo) for local development
+- Protocol Buffers compiler (protoc) for schema compilation
+- AWS CLI and AWS SAM or Terraform for deployment
 
 ### Deployment Steps
 
@@ -108,9 +251,13 @@ Data flows through the system as follows:
    cd tmdb-data-collector
    ```
 
-2. Install dependencies:
+2. Build the Rust Lambda functions:
    ```bash
-   npm install
+   # First compile the protobuf schemas
+   protoc --rust_out=src/protos/ schemas/*.proto
+   
+   # Then build the lambda functions
+   cargo build --release
    ```
 
 3. Configure your TMDB API key and AWS settings:
@@ -119,14 +266,21 @@ Data flows through the system as follows:
    # Edit .env with your settings
    ```
 
-4. Deploy the stack:
+4. Deploy the stack (using AWS SAM):
    ```bash
-   npm run deploy
+   sam build
+   sam deploy --guided
+   ```
+   
+   Or if using Terraform:
+   ```bash
+   terraform init
+   terraform apply
    ```
 
 5. Verify the deployment:
    ```bash
-   npm run verify
+   cargo run --bin verify-deployment
    ```
 
 ## Configuration
@@ -144,10 +298,10 @@ Data flows through the system as follows:
 
 ### Configuration Files
 
-- `serverless.yml` - Main project configuration
-- `collector.config.js` - Collector function settings
-- `harvester.config.js` - Harvester function settings
-- `storage.config.js` - Storage organization settings
+- `template.yaml` or `main.tf` - Main infrastructure configuration (SAM or Terraform)
+- `config/collector.toml` - Collector function settings
+- `config/harvester.toml` - Harvester function settings
+- `config/storage.toml` - Storage organization settings
 
 ## Usage
 
@@ -164,7 +318,7 @@ aws events put-events --entries file://samples/trigger-event.json
 Track the progress of collection jobs:
 
 ```bash
-npm run status
+cargo run --bin status-checker
 ```
 
 ### Querying Collected Data
@@ -172,16 +326,10 @@ npm run status
 Access collected data directly from S3 or use the provided utilities:
 
 ```bash
-npm run query -- --type=movie --id=550
+cargo run --bin query-tool -- --type=movie --id=550
 ```
 
-### Advanced Usage
 
-See the [Advanced Usage Guide](docs/advanced-usage.md) for more complex scenarios including:
-- Collecting specific media types
-- Setting custom date ranges
-- Implementing differential updates
-- Optimizing for large data sets
 
 ## API Reference
 
@@ -203,19 +351,22 @@ Documentation for key functions can be found in the [API Reference](docs/api-ref
 
 ## Performance Considerations
 
-The system is designed to balance performance with API rate limit compliance:
+The system is designed to balance performance with API rate limit compliance, leveraging Rust's speed and efficiency:
 
 - SQS queue manages the processing rate to stay within TMDB's limits
 - Collector functions implement exponential backoff for rate limit handling
 - Batch processing optimizes Lambda execution time
 - Object storage pattern minimizes read/write operations
 - Dead letter queues capture and allow replay of failed operations
+- Rust's zero-cost abstractions and memory safety for optimal performance
+- Asynchronous processing using Rust's async/await capabilities
 
 For large-scale collections, consider:
 - Increasing Lambda memory allocations for better performance
 - Adjusting concurrency settings based on your TMDB API tier
 - Implementing data compression for storage efficiency
 - Using reserved concurrency to prevent resource starvation
+- Tuning Rust compiler optimizations for smaller binary sizes
 
 ## Monitoring and Logging
 
@@ -229,7 +380,7 @@ The system provides comprehensive monitoring and logging:
 To set up alerts:
 
 ```bash
-npm run setup-alerts
+cargo run --bin setup-alerts
 ```
 
 ## Troubleshooting
@@ -248,7 +399,11 @@ npm run setup-alerts
 Enable detailed logging:
 
 ```bash
-npm run deploy -- --stage=dev --debug=true
+# For SAM
+sam deploy --parameter-overrides "Stage=dev Debug=true"
+
+# For Terraform
+terraform apply -var="stage=dev" -var="debug=true"
 ```
 
 ## Contributing
