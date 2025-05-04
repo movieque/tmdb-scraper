@@ -7,8 +7,8 @@ A Rust-based serverless data pipeline for efficiently collecting and distributin
 This project implements a serverless data pipeline consisting of two main components:
 
 1. **Harvester Lambda**: Triggered on schedule via EventBridge to either:
-   - Process TMDB daily ID exports (export mode)
-   - Check for updates since the last run (sync mode)
+   - Process TMDB daily ID exports (export action)
+   - Check for updates since the last run (sync action)
    - Organize IDs into batches and push to SQS
 
 2. **Collector Lambda**: Triggered by SQS messages to:
@@ -29,13 +29,13 @@ By storing the data directly in Edge Storage as Protobuf files, this solution:
 
 1. **Scheduled Trigger**:
    - EventBridge schedule triggers the Harvester Lambda
-   - Includes parameters for dataset type and mode (export/sync)
+   - Includes parameters for dataset type and action (export/sync)
 
 2. **Harvester Function**:
-   - In export mode: Downloads and processes daily ID exports from TMDB
-   - In sync mode: Queries for updates since the last run
+   - In export action: Downloads and processes daily ID exports from TMDB
+   - In sync action: Queries for updates since the last run
    - Sorts IDs and organizes them into batches of 50
-   - Pushes batches to SQS with metadata (mode, dataset type)
+   - Pushes batches to SQS with metadata (action, dataset type)
 
 3. **SQS Queue**:
    - Holds batched ID messages
@@ -59,7 +59,7 @@ By storing the data directly in Edge Storage as Protobuf files, this solution:
   - `harvester`: Builds only the Harvester Lambda
   - `collector`: Builds only the Collector Lambda
 
-- **Operational Modes**:
+- **Operational actions**:
   - `export`: Full dataset collection using TMDB exports
   - `sync`: Incremental updates since last collection
 
@@ -132,8 +132,8 @@ cargo test
 ### Local Execution
 
 ```bash
-# Test Harvester with export mode and movie dataset
-cargo run --features harvester -- --mode export --dataset movie
+# Test Harvester with export action and movie dataset
+cargo run --features harvester -- --action export --dataset movie
 
 # Test Collector with a sample SQS message
 cargo run --features collector -- --input-file test/sample_sqs_message.json
