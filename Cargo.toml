@@ -13,15 +13,17 @@ name = "collector"
 path = "src/collector/main.rs"
 
 [lib]
-name = "lib"
-path = "src/lib/lib.rs"
+name = "shared"
+path = "src/shared/lib.rs"
 
 
 [dependencies]
 aws-sdk-sqs = "1.65.0"
+chrono = { version = "0.4.41", features = ["serde"] }
 lambda_runtime = "0.13.0"
 reqwest = { version = "0.12.15", features = ["native-tls-vendored", "json"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
+static_init = "1.0.3"
 thiserror = "2.0.12"
 tokio = { version = "1.44.2", features = ["full"] }
