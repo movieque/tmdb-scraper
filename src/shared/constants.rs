@@ -1,0 +1,1 @@
+pub(crate) const HARVESTER_URL: &'static str = "http://files.tmdb.org/p/exports/";

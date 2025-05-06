@@ -1,6 +1,10 @@
 use lambda_runtime::{run, LambdaEvent, service_fn};
 use shared::*;
 
+mod harvester;
+mod queue;
+mod error;
+
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -10,16 +14,14 @@ async fn main() -> Result<()> {
 
 
 async fn handler(event: LambdaEvent<Action>) -> Result<()> {
-    println!("Received event: {:?}", event);
     let action = event.payload;
     match action {
         Action::Export(dataset) => {
-            println!("Exporting dataset: {:?}", dataset);
-            // Call the export function here
+            let messages = harvester::harvest(dataset).await?;
+            queue::process_messages(messages).await?;
         }
         Action::Sync(dataset) => {
             println!("Syncing dataset: {:?}", dataset);
-            // Call the sync function here
         }
     }
     Ok(())
