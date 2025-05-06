@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'TMDB Harvester Lambda and SQS Queue'
+
+Resources:
+  # SQS Queue
+  IdHolderQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: Id-Holder
+      VisibilityTimeout: 300  # 5 minutes
+      MessageRetentionPeriod: 1209600  # 14 days
+
+  # Lambda Function
+  HarvesterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: harvester
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Architectures:
+        - arm64
+      MemorySize: 1024
+      Timeout: 300  # 5 minutes
+      CodeUri: ./target/lambda/harvester/bootstrap.zip
+      Environment:
+        Variables:
+          QUEUE_URL: !Ref IdHolderQueue
+          RUST_LOG: info
+      Policies:
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt IdHolderQueue.QueueName
+
+Outputs:
+  HarvesterFunctionArn:
+    Description: ARN of the Harvester Lambda function
+    Value: !GetAtt HarvesterFunction.Arn
+
+  IdHolderQueueUrl:
+    Description: URL of the SQS queue for IDs
+    Value: !Ref IdHolderQueue
+
+  IdHolderQueueArn:
+    Description: ARN of the SQS queue for IDs
+    Value: !GetAtt IdHolderQueue.Arn
