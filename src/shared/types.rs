@@ -6,7 +6,7 @@ use std::error::Error;
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum Action {
     Export(Dataset),
-    Sync(Dataset)
+    Sync(Dataset, u8)
 }
 
 

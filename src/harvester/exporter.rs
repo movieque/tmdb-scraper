@@ -1,8 +1,12 @@
 use futures::{io::{self, BufReader, ErrorKind}, prelude::*};
 use async_compression::futures::bufread::GzipDecoder;
+use chrono::{DateTime, Utc, Timelike};
 use serde::Deserialize;
 use reqwest::Client;
 use shared::*;
+
+
+const HARVESTER_URL: &'static str = "http://files.tmdb.org/p/exports/";
 
 
 #[derive(Deserialize)]
@@ -11,10 +15,10 @@ struct Movie {
 }
 
 
-pub async fn harvest(dataset: Dataset) -> Result<Vec<Message>> {
+pub async fn harvest_export(dataset: Dataset) -> Result<Vec<u32>> {
     let futures = (
-        extract(harvester_url(dataset, false)),
-        extract(harvester_url(dataset, true)),
+        extract(exporter_url(dataset, false)),
+        extract(exporter_url(dataset, true)),
     );
 
     let ids = match dataset {
@@ -27,28 +31,7 @@ pub async fn harvest(dataset: Dataset) -> Result<Vec<Message>> {
         _ => futures::try_join!(futures.0)?.0,
     };
 
-    let mut sorted = Vec::<Option<u32>>::new();
-    for id in ids {
-        make_sure_index_exists(&mut sorted, id as usize);
-        sorted[id as usize] = Some(id);
-    }
-    let mut sorted = sorted.into_iter().peekable();
-    let mut messages = Vec::<Message>::new();
-
-    while let Some(_) = sorted.peek() {
-        let mut ids = Vec::<u32>::new();
-        for _ in 0..50 {
-            if let Some(Some(id)) = sorted.next() {
-                ids.push(id);
-            }
-        }
-        if !ids.is_empty() {
-            let message = Message{dataset, ids};
-            messages.push(message);
-        }
-    }
-
-    Ok(messages)
+    Ok(ids)
 }
 
 
@@ -67,9 +50,22 @@ async fn extract(url: String) -> Result<Vec<u32>> {
     Ok(ids)
 }
 
+pub fn exporter_url(dataset: Dataset, adult: bool) -> String {
+    let base_url = HARVESTER_URL;
+    let adult = if adult {"adult_"}else{""};
+    let dataset = dataset.as_ref();
+    let date = processing_date();
+    let url = format!("{}{}{}{}.json.gz", base_url, adult, dataset, date);
+    url
+}
 
-fn make_sure_index_exists<T: Default + Clone>(vec: &mut Vec<T>, index: usize) {
-    if index >= vec.len() {
-        vec.resize(index + 1, T::default());
-    }
+
+fn processing_date() -> String {
+    let now: DateTime<Utc> = Utc::now();
+    let now = if now.hour() < 8 {
+        now - chrono::Duration::days(1)
+    } else {
+        now
+    };
+    now.format("%m_%d_%Y").to_string()
 }
