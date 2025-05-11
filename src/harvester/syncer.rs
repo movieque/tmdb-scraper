@@ -29,21 +29,25 @@ pub async fn harvest_sync(dataset: Dataset, days_interval: u8) -> Result<Vec<u32
     let (ids, pages) = request(url, 1, api_key, &client, days_interval).await?;
     let mut set = ids.into_iter().collect::<HashSet<u32>>();
     let mut futures = Vec::new();
+    
     for page in 2..=pages {
-        let mut batch = Vec::new();
-        for _ in 0..25 {
-            batch.push(request(url, page, api_key, &client, days_interval))
-        }
-        futures.push(batch);
+        futures.push(request(url, page, api_key, &client, days_interval))
     }
 
-    for iter in futures {
+    while !futures.is_empty() {
+        let mut iter = Vec::new();
+        for _ in 0..25 {
+            if let Some(future) = futures.pop() {
+                iter.push(future);
+            } else {
+                break;
+            }
+        }
         let result = futures::future::try_join_all(iter).await?;
         for (iter, _) in result {
             set.extend(iter);
         }
     }
-
     Ok(set.into_iter().collect::<Vec<u32>>())
 }
 
